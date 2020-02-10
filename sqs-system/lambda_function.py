@@ -1,10 +1,16 @@
 import json
 import boto3 as aws
-from database.Database import ConnectionPostgres
+from database.Rds import Rds
+from database.Postgres import Postgres
 from sqs.Sqs import Sqs
 
 def lambda_handler(event, context):
-    # db = ConnectionPostgres().connect("user", "password", "host", "port", "database")
+    
+    rds = Rds()
+    endpoint = rds.getInstance("dbIdentifier")
+    
+    postgres = Postgres()
+    cursor, connection = postgres.connectToPostgres("user", "password", endpoint.host, endpoint.port, "database")
     
     sqs = Sqs()
     
