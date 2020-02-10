@@ -21,6 +21,8 @@ def lambda_handler(event, context):
         os.environ['database']
     )
     
+    cursor.
+    
     
     sqs = Sqs()
     
