@@ -1,47 +1,83 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Create an endpoint with lambda integration in a existing API
+Description: Create an endpoint with lambda integration in existing API
 
 Resources:
 
   ApiGatewayResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      ParentId: parent_resource_id
-      PathPart: 'resource_name'
-      RestApiId: 'api_id'
+      ParentId: '#parent_id'
+      PathPart: 'cloudformation-resource'
+      RestApiId: '#api_id'
   
   ApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      ApiKeyRequired: false
       AuthorizationType: NONE
       HttpMethod: GET
+      RequestParameters:
+        method.request.header.system: 'system'
+        method.request.header.authorization: 'authorization'
       Integration:
-        ConnectionType: INTERNET
         IntegrationHttpMethod: GET
-        PassthroughBehavior: WHEN_NO_MATCH
+        PassthroughBehavior: WHEN_NO_TEMPLATES
         Type: AWS
-        Uri: !Sub 'arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/lambda_arn/invocations'
+        Uri: !Sub 'arn:aws:apigateway:us-west-1:lambda:path/2015-03-31/functions/#lambda_arn/invocations'
+        RequestTemplates:
+          application/json: |
+            #set($allParams = $input.params())
+            {
+              "requestParams" : {},
+              "bodyJson" : $input.json('$'),
+              "params" : {
+                #foreach($type in $allParams.keySet())
+                  #set($params = $allParams.get($type))
+                  "$type" : {
+                    #foreach($paramName in $params.keySet())
+                      "$paramName" : "$util.escapeJavaScript($params.get($paramName))"
+                      #if($foreach.hasNext),#end
+                    #end
+                  }
+                  #if($foreach.hasNext),#end
+                #end
+              },
+              "stagevariables" : {
+                #foreach($key in $stageVariables.keySet())
+                  "$key" : "$util.escapeJavaScript($stageVariables.get($key))"
+                  #if($foreach.hasNext),#end
+                #end
+              },
+              "context" : {}
+            }
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates: { "application/json": "$input.json('$.bodyJson')" }
+          - StatusCode: '412'
+            SelectionPattern: '\{\"status\"\:412.*'
+            ResponseTemplates: { 'application/json': "#set ($errorMessageObj = $util.parseJson($input.path('$.errorMessage'))) $errorMessageObj.bodyJson" }
+          - StatusCode: '500'
+            SelectionPattern: '\{\"status\"\:500.*'
+            ResponseTemplates: { 'application/json': '{ "message": "lascou" }' }
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseModels: { "application/json": "Empty" }
+        - StatusCode: '412'
+        - StatusCode: '500'
       ResourceId: !Ref ApiGatewayResource
-      RestApiId: 'api_id'
+      RestApiId: '#api_id'
   
   ApiGatewayModel:
     Type: AWS::ApiGateway::Model
     Properties:
       ContentType: 'application/json'
-      RestApiId: 'api_id'
+      RestApiId: '#api_id'
       Schema: {}
-  
-  ApiGatewayStage:
-    Type: AWS::ApiGateway::Stage
-    Properties:
-      DeploymentId: !Ref ApiGatewayDeployment
-      RestApiId: 'api_id'
   
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn: ApiGatewayMethod
     Properties:
       Description: Lambda API Deployment
-      RestApiId: 'api_id'
+      RestApiId: '#api_id'
+      StageName: 'dev'
