@@ -1,0 +1,2 @@
+get the request validator id:
+aws apigateway get-request-validators --rest-api-id #api_id

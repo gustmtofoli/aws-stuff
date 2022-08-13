@@ -7,8 +7,8 @@ Resources:
   ApiGatewayResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      ParentId: '#parent_id'
-      PathPart: 'cloudformation-resource'
+      ParentId: '#parent_resource_id'
+      PathPart: '#resource_name'
       RestApiId: '#api_id'
   
   ApiGatewayMethod:
@@ -17,13 +17,14 @@ Resources:
       AuthorizationType: NONE
       HttpMethod: GET
       RequestParameters:
-        method.request.header.system: 'system'
-        method.request.header.authorization: 'authorization'
+        method.request.header.system: true
+        method.request.header.authorization: true
+      RequestValidatorId: '#request_validator_id'
       Integration:
-        IntegrationHttpMethod: GET
+        IntegrationHttpMethod: POST
         PassthroughBehavior: WHEN_NO_TEMPLATES
         Type: AWS
-        Uri: !Sub 'arn:aws:apigateway:us-west-1:lambda:path/2015-03-31/functions/#lambda_arn/invocations'
+        Uri: !Sub 'arn:aws:apigateway:#region:lambda:path/2015-03-31/functions/arn:aws:lambda:#region:#account_id:function:#lambda_name/invocations'
         RequestTemplates:
           application/json: |
             #set($allParams = $input.params())
@@ -67,6 +68,13 @@ Resources:
       ResourceId: !Ref ApiGatewayResource
       RestApiId: '#api_id'
   
+  LambdaApiGatewayInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: 'arn:aws:lambda:us-east-1:034554972399:function:lab-hello'
+      Principal: apigateway.amazonaws.com
+  
   ApiGatewayModel:
     Type: AWS::ApiGateway::Model
     Properties:
@@ -78,6 +86,5 @@ Resources:
     Type: AWS::ApiGateway::Deployment
     DependsOn: ApiGatewayMethod
     Properties:
-      Description: Lambda API Deployment
       RestApiId: '#api_id'
-      StageName: 'dev'
+      StageName: '#stage_name'
