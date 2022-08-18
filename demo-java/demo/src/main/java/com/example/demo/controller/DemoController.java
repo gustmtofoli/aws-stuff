@@ -13,10 +13,10 @@ import com.secrets.secretsmanagerclient.secretsmanager.SecretsManager;
 @RequestMapping(path="/demo", produces=MediaType.APPLICATION_JSON_VALUE)
 public class DemoController {
 	
-	@RequestMapping(method = RequestMethod.GET, path="/getsecret")
+	@RequestMapping(method = RequestMethod.GET, path="/hello")
 	public void demoTest() throws JsonMappingException, JsonProcessingException {
 		SecretsManager secretsManager = new SecretsManager();
-		secretsManager.getSecretAsHashMap("test");
+		secretsManager.getSecretAsHashMap("hello world");
 	}
 
 }
